@@ -1,39 +1,116 @@
-import jwt
+import os
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Annotated
 from passlib.context import CryptContext
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
+from jose import JWTError, jwt
+from fastapi.security import OAuth2PasswordBearer
+from dotenv import load_dotenv
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from models import User
+from database import get_db
 
-# Chave secreta para assinar os tokens JWT
-SECRET_KEY = "your_secret_key"  # Substitua por uma chave secreta mais segura
+# Carregar variáveis de ambiente
+load_dotenv()
+
+# Configurações
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY não configurada nas variáveis de ambiente")
+    
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+TOKEN_URL = "api/auth/login"  # Alterado para seguir boas práticas de roteamento
 
-# Usaremos o passlib para hashear as senhas
+# Modelos Pydantic
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+
+# Configuração de segurança
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=TOKEN_URL)
 
-# Função para gerar um token JWT
-def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes=30)):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + expires_delta
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, os.getenv("SECRET_KEY", "secret"), algorithm="HS256")
-    return encoded_jwt
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verifica se a senha corresponde ao hash"""
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao verificar senha: {str(e)}"
+        )
 
-# Função para verificar se a senha fornecida está correta
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+def get_password_hash(password: str) -> str:
+    """Gera hash da senha"""
+    try:
+        return pwd_context.hash(password)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao gerar hash da senha: {str(e)}"
+        )
 
-# Função para hashear a senha
-def get_password_hash(password):
-    return pwd_context.hash(password)
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Cria token JWT"""
+    try:
+        to_encode = data.copy()
+        expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+        to_encode.update({"exp": expire})
+        return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao gerar token: {str(e)}"
+        )
 
-# Função para verificar o token JWT
-def verify_token(token: str):
+async def verify_token(token: Annotated[str, Depends(oauth2_scheme)]) -> TokenData:
+    """Verifica e decodifica um token JWT"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Não foi possível validar as credenciais",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        return TokenData(username=username)
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalid")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except JWTError:
+        raise credentials_exception
+
+async def get_current_user(
+    token_data: Annotated[TokenData, Depends(verify_token)],
+    db: Session = Depends(get_db)
+) -> User:
+    """Obtém usuário atual a partir do token"""
+    user = db.query(User).filter(User.email == token_data.username).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado"
+        )
+    return user
+
+async def get_current_active_user(
+    current_user: Annotated[User, Depends(get_current_user)]
+) -> User:
+    """Verifica se usuário está ativo"""
+    # Exemplo: verificar se conta está ativa
+    if not current_user.is_active:  # Adicione este campo ao seu modelo User se necessário
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Usuário inativo"
+        )
+    return current_user

@@ -1,139 +1,199 @@
-from fastapi import Depends
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi.security import OAuth2PasswordBearer
-from pydantic import BaseModel, EmailStr, constr
-from sqlalchemy.orm import Session
-from models import User
-from database import SessionLocal
-from passlib.context import CryptContext
-from sqlalchemy.exc import IntegrityError
-import os
 from datetime import datetime, timedelta
-import jwt
+from typing import Optional, Annotated
+from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+import logging
+import os
 from dotenv import load_dotenv
 
-# Carregar variáveis do arquivo .env
+from models import User
+from database import get_db
+from schemas import UserOut
+
+# Configuração básica de logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Carregar variáveis de ambiente
 load_dotenv()
 
-router = APIRouter()
+router = APIRouter(prefix="/api/users", tags=["Users"])
 
-# Definir oauth2_scheme para autenticação
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+# Configurações
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    logger.error("SECRET_KEY não configurada nas variáveis de ambiente")
+    raise ValueError("SECRET_KEY não configurada nas variáveis de ambiente")
+    
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# Criptografia de senha
+# Configuração de segurança
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/users/login")
 
-# Modelo de entrada para o cadastro de usuário
+# Schemas
 class UserCreate(BaseModel):
-    name: str
+    name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
-    password: constr(min_length=8)  # Adiciona validação de senha mínima
+    password: str = Field(..., min_length=8)
 
-# Função para verificar a senha
-def hash_password(password: str):
-    return pwd_context.hash(password)
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
 
-# Função para verificar se o email já existe
-def get_user_by_email(db: Session, email: str):
-    return db.query(User).filter(User.email == email).first()
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
-# Função para obter a sessão do banco de dados
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-# Função para verificar a senha
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-# Função para criar o token JWT
-def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes=15)):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + expires_delta
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, os.getenv("SECRET_KEY", "secret"), algorithm="HS256")
-    return encoded_jwt
-
-# Função para autenticar o usuário
-def authenticate_user(db: Session, email: str, password: str):
-    user = db.query(User).filter(User.email == email).first()
-    if user is None or not verify_password(password, user.password):
-        # Não revelar se é o e-mail ou senha errada
-        return None
-    return user
-
-# Endpoint para criar um usuário
-@router.post("/register")
-def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    # Verifica se o usuário já existe
-    db_user = get_user_by_email(db, user.email)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email já cadastrado")
-
-    # Criptografa a senha
-    hashed_password = hash_password(user.password)
-
-    # Cria o usuário
-    db_user = User(name=user.name, email=user.email, password=hashed_password)
-    db.add(db_user)
-    try:
-        db.commit()
-        db.refresh(db_user)
-        return {"msg": "Usuário criado com sucesso", "user_id": db_user.id}
-    except IntegrityError as e:
-        db.rollback()
-        if 'email' in str(e):
-            raise HTTPException(status_code=400, detail="O email já está em uso.")
-        raise HTTPException(status_code=400, detail="Erro ao criar usuário")
-
-# Endpoint para login
-@router.post("/login")
-def login_user(user: UserCreate, db: Session = Depends(get_db)):
-    db_user = authenticate_user(db, user.email, user.password)
-    if not db_user:
-        raise HTTPException(status_code=401, detail="Credenciais inválidas")
-
-    # Cria o token JWT
-    access_token = create_access_token(data={"sub": db_user.email})
-    return {"access_token": access_token, "token_type": "bearer"}
-
-# Modelo de entrada para a alteração de senha
 class ChangePassword(BaseModel):
     old_password: str
-    new_password: str
+    new_password: str = Field(..., min_length=8)
 
-# Função para verificar o token JWT
-def verify_jwt_token(token: str):
+# Funções auxiliares
+def get_user_by_email(db: Session, email: str) -> Optional[User]:
+    logger.debug(f"Buscando usuário pelo email: {email}")
+    return db.query(User).filter(User.email == email).first()
+
+def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
+    logger.debug(f"Autenticando usuário: {email}")
+    user = get_user_by_email(db, email)
+    if not user:
+        logger.warning(f"Usuário não encontrado: {email}")
+        return None
+    if not pwd_context.verify(password, user.password):
+        logger.warning("Senha incorreta para o usuário: {email}")
+        return None
+    logger.info(f"Usuário autenticado com sucesso: {email}")
+    return user
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    logger.debug(f"Token JWT criado para: {data.get('sub')}")
+    return encoded_jwt
+
+async def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Session = Depends(get_db)
+) -> User:
+    logger.debug("Validando token JWT")
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Não foi possível validar as credenciais",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     try:
-        payload = jwt.decode(token, os.getenv("SECRET_KEY", "secret"), algorithms=["HS256"])
-        return payload.get("sub")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Token inválido")
-
-# Endpoint para obter o perfil do usuário
-@router.get("/profile")
-def get_profile(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    user_email = verify_jwt_token(token)
-    user = db.query(User).filter(User.email == user_email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuário não encontrado")
-    return {"name": user.name, "email": user.email}
-
-# Endpoint para alterar a senha
-@router.put("/change-password")
-def change_password(change: ChangePassword, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    user_email = verify_jwt_token(token)
-    user = db.query(User).filter(User.email == user_email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuário não encontrado")
-    if not verify_password(change.old_password, user.password):
-        raise HTTPException(status_code=400, detail="Senha antiga incorreta")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            logger.warning("Token JWT inválido: email não encontrado no payload")
+            raise credentials_exception
+    except JWTError as e:
+        logger.error(f"Erro ao decodificar token JWT: {str(e)}")
+        raise credentials_exception
     
-    # Criptografa a nova senha
-    hashed_new_password = hash_password(change.new_password)
-    user.password = hashed_new_password
+    user = get_user_by_email(db, email)
+    if user is None:
+        logger.warning(f"Usuário não encontrado no banco para o email: {email}")
+        raise credentials_exception
+    return user
+
+# Rotas
+@router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+async def register_user(user: UserCreate, request: Request, db: Session = Depends(get_db)):
+    logger.info(f"Requisição de registro recebida. IP: {request.client.host}")
+    logger.debug(f"Dados recebidos: {user.dict()}")
+
+    db_user = get_user_by_email(db, user.email)
+    if db_user:
+        logger.warning(f"Tentativa de registro com email já cadastrado: {user.email}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email já cadastrado"
+        )
+
+    try:
+        hashed_password = pwd_context.hash(user.password)
+        db_user = User(
+            name=user.name,
+            email=user.email,
+            password=hashed_password
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        logger.info(f"Usuário registrado com sucesso: {user.email}")
+        return db_user
+    except IntegrityError as e:
+        db.rollback()
+        logger.error(f"Erro de integridade ao registrar usuário: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Erro ao criar usuário"
+        )
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro inesperado ao registrar usuário: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro interno no servidor"
+        )
+
+@router.post("/login", response_model=Token)
+async def login_for_access_token(
+    request: Request,
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: Session = Depends(get_db)
+):
+    logger.info(f"Requisição de login recebida. IP: {request.client.host}")
+    logger.debug(f"Tentativa de login para usuário: {form_data.username}")
+
+    user = authenticate_user(db, form_data.username, form_data.password)
+    if not user:
+        logger.warning(f"Falha na autenticação para usuário: {form_data.username}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email ou senha incorretos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token = create_access_token(data={"sub": user.email})
+    logger.info(f"Login bem-sucedido para usuário: {user.email}")
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.get("/me", response_model=UserOut)
+async def read_users_me(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)]
+):
+    logger.info(f"Requisição de perfil recebida. Usuário: {current_user.email}")
+    return current_user
+
+@router.put("/change-password", status_code=status.HTTP_200_OK)
+async def change_password(
+    request: Request,
+    change: ChangePassword,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+):
+    logger.info(f"Requisição de alteração de senha para usuário: {current_user.email}")
+    
+    if not pwd_context.verify(change.old_password, current_user.password):
+        logger.warning(f"Senha antiga incorreta para usuário: {current_user.email}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Senha antiga incorreta"
+        )
+    
+    current_user.password = pwd_context.hash(change.new_password)
     db.commit()
-    return {"msg": "Senha alterada com sucesso"}
+    logger.info(f"Senha alterada com sucesso para usuário: {current_user.email}")
+    return {"message": "Senha alterada com sucesso"}
