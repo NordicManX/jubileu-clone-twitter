@@ -67,7 +67,7 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
         logger.warning(f"Usuário não encontrado: {email}")
         return None
     if not pwd_context.verify(password, user.password):
-        logger.warning("Senha incorreta para o usuário: {email}")
+        logger.warning(f"Senha incorreta para o usuário: {email}")
         return None
     logger.info(f"Usuário autenticado com sucesso: {email}")
     return user
@@ -84,7 +84,8 @@ async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: Session = Depends(get_db)
 ) -> User:
-    logger.debug("Validando token JWT")
+    logger.debug("Validando token JWT...")
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Não foi possível validar as credenciais",
@@ -94,16 +95,19 @@ async def get_current_user(
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
-            logger.warning("Token JWT inválido: email não encontrado no payload")
+            logger.warning("Token inválido: sub (email) ausente")
             raise credentials_exception
+        logger.debug(f"Token decodificado com sucesso. Email: {email}")
     except JWTError as e:
-        logger.error(f"Erro ao decodificar token JWT: {str(e)}")
+        logger.error(f"Erro ao decodificar token JWT: {e}")
         raise credentials_exception
-    
+
     user = get_user_by_email(db, email)
     if user is None:
         logger.warning(f"Usuário não encontrado no banco para o email: {email}")
         raise credentials_exception
+
+    logger.info(f"Usuário autenticado com sucesso: {user.email}")
     return user
 
 # Rotas
@@ -149,24 +153,22 @@ async def register_user(user: UserCreate, request: Request, db: Session = Depend
 
 @router.post("/login", response_model=Token)
 async def login_for_access_token(
-    request: Request,
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    db: Session = Depends(get_db)
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
 ):
-    logger.info(f"Requisição de login recebida. IP: {request.client.host}")
-    logger.debug(f"Tentativa de login para usuário: {form_data.username}")
-
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
-        logger.warning(f"Falha na autenticação para usuário: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou senha incorretos",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    access_token = create_access_token(data={"sub": user.email})
-    logger.info(f"Login bem-sucedido para usuário: {user.email}")
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.get("/me", response_model=UserOut)
@@ -174,26 +176,36 @@ async def read_users_me(
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)]
 ):
-    logger.info(f"Requisição de perfil recebida. Usuário: {current_user.email}")
-    return current_user
+    logger.info(f"Requisição para perfil do usuário autenticado: {current_user.email}")
+    return {
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email,
+        "created_at": current_user.created_at.isoformat()
+    }
 
-@router.put("/change-password", status_code=status.HTTP_200_OK)
-async def change_password(
-    request: Request,
-    change: ChangePassword,
+@router.put("/me", response_model=UserOut)
+async def update_user_info(
+    user_data: UserCreate,  # Usando o esquema UserCreate para permitir a atualização de dados
     current_user: Annotated[User, Depends(get_current_user)],
     db: Session = Depends(get_db)
 ):
-    logger.info(f"Requisição de alteração de senha para usuário: {current_user.email}")
-    
-    if not pwd_context.verify(change.old_password, current_user.password):
-        logger.warning(f"Senha antiga incorreta para usuário: {current_user.email}")
+    # Verificar se o usuário está tentando alterar o email para um já existente
+    db_user = get_user_by_email(db, user_data.email)
+    if db_user and db_user.id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Senha antiga incorreta"
+            detail="O email fornecido já está em uso por outro usuário."
         )
-    
-    current_user.password = pwd_context.hash(change.new_password)
+
+    # Atualizar os dados do usuário no banco de dados
+    current_user.name = user_data.name
+    current_user.email = user_data.email
+    if user_data.password:
+        current_user.password = pwd_context.hash(user_data.password)  # Atualizando a senha, se fornecida
+
     db.commit()
-    logger.info(f"Senha alterada com sucesso para usuário: {current_user.email}")
-    return {"message": "Senha alterada com sucesso"}
+    db.refresh(current_user)
+
+    # Retornar os dados atualizados do usuário
+    return current_user

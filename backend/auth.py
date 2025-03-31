@@ -60,7 +60,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     try:
         to_encode = data.copy()
         expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-        to_encode.update({"exp": expire})
+        to_encode.update({"exp": expire, "sub": data.get("sub")})  # Garantir que o 'sub' seja incluído no payload
         return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     except Exception as e:
         raise HTTPException(
@@ -77,7 +77,7 @@ async def verify_token(token: Annotated[str, Depends(oauth2_scheme)]) -> TokenDa
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
+        username: str = payload.get("sub")  # Aqui está buscando o campo 'sub'
         if username is None:
             raise credentials_exception
         return TokenData(username=username)
@@ -95,7 +95,7 @@ async def get_current_user(
     db: Session = Depends(get_db)
 ) -> User:
     """Obtém usuário atual a partir do token"""
-    user = db.query(User).filter(User.email == token_data.username).first()
+    user = db.query(User).filter(User.email == token_data.username).first()  # Aqui estou assumindo que o 'sub' no token é o email
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
