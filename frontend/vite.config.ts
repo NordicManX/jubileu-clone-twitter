@@ -5,5 +5,13 @@ export default defineConfig({
   plugins: [react()],
   css: {
     postcss: './postcss.config.cjs'
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'es2020',
+      supported: { 
+        'top-level-await': true 
+      }
+    }
   }
 })
