@@ -1,14 +1,20 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Login from "./pages/login/login.jsx";
-import "./App.css";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import PasswordForgot from "./pages/PasswordForgot";
 
 function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
+
+        <Route path="/login" element={<Login />} />
+        <Route path="/cadastro" element={<Signup />} />
+        <Route path="/recuperar-senha" element={<PasswordForgot />} />
+        {/* outras rotas */}
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
 
