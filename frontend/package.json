@@ -12,8 +12,13 @@
   "dependencies": {
     "@tailwindcss/postcss": "^4.0.17",
     "axios": "^1.8.4",
+    "dompurify": "^3.2.5",
+    "emoji-picker-react": "^4.12.2",
+    "emoji-toolkit": "^9.0.1",
+    "marked": "^15.0.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.4.1"
   },
   "devDependencies": {

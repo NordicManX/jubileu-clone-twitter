@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -20,13 +21,18 @@ const Login = () => {
       const data = await response.json();
       if (response.ok) {
         localStorage.setItem("token", data.access_token);
+        localStorage.setItem("userEmail", email); // <- Aqui está o segredo
         alert("Login bem-sucedido!");
+
+        setTimeout(() => {
+          navigate("/timeline");
+        }, 4000);
       } else {
         alert("Erro: " + data.detail);
+        setIsLoading(false);
       }
     } catch (error: any) {
       alert("Erro de conexão: " + error.message);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -35,7 +41,6 @@ const Login = () => {
     <div className="w-screen h-screen flex items-center justify-center">
       <div className="w-full max-w-md mx-auto">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-azul-cremoso-DEFAULT">
-          {/* Cabeçalho com gradiente sutil */}
           <div className="bg-gradient-to-r from-azul-cremoso-DEFAULT to-azul-cremoso-dark p-8 text-center">
             <h1 className="text-3xl font-bold text-[#4a7bc1]">Bem-vindo ao Jubileu</h1>
             <p className="text-[#7aaae8]/90 mt-2">Faça login para continuar</p>
@@ -51,7 +56,7 @@ const Login = () => {
                 id="email"
                 placeholder="seu@email.com"
                 value={email}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-5 py-3 rounded-lg border border-azul-cremoso-DEFAULT focus:ring-2 focus:ring-azul-cremoso-dark focus:border-transparent transition-all"
                 required
               />
@@ -66,7 +71,7 @@ const Login = () => {
                 id="password"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-5 py-3 rounded-lg border border-azul-cremoso-DEFAULT focus:ring-2 focus:ring-azul-cremoso-dark focus:border-transparent transition-all"
                 required
               />
@@ -96,7 +101,7 @@ const Login = () => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Processando...
+                  Redirecionando...
                 </span>
               ) : (
                 "Entrar"
