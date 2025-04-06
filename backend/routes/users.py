@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 from models import User
 from database import get_db
-from schemas import UserOut
+from schemas import UserOut, UserUpdate
 
 # Configuração básica de logging
 logging.basicConfig(level=logging.INFO)
@@ -169,7 +169,16 @@ async def login_for_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "name": user.name,
+            "email": user.email,
+            "id": user.id
+        }
+    }
+
 
 @router.get("/me", response_model=UserOut)
 async def read_users_me(
@@ -186,26 +195,28 @@ async def read_users_me(
 
 @router.put("/me", response_model=UserOut)
 async def update_user_info(
-    user_data: UserCreate,  # Usando o esquema UserCreate para permitir a atualização de dados
+    user_data: UserUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Session = Depends(get_db)
 ):
     # Verificar se o usuário está tentando alterar o email para um já existente
-    db_user = get_user_by_email(db, user_data.email)
-    if db_user and db_user.id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="O email fornecido já está em uso por outro usuário."
-        )
+    if user_data.email:
+        db_user = get_user_by_email(db, user_data.email)
+        if db_user and db_user.id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="O email fornecido já está em uso por outro usuário."
+            )
 
     # Atualizar os dados do usuário no banco de dados
-    current_user.name = user_data.name
-    current_user.email = user_data.email
+    if user_data.name:
+        current_user.name = user_data.name
+    if user_data.email:
+        current_user.email = user_data.email
     if user_data.password:
-        current_user.password = pwd_context.hash(user_data.password)  # Atualizando a senha, se fornecida
+        current_user.password = pwd_context.hash(user_data.password)
 
     db.commit()
     db.refresh(current_user)
 
-    # Retornar os dados atualizados do usuário
     return current_user

@@ -16,6 +16,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=2, max_length=100, example="Novo Nome")
     password: Optional[str] = Field(None, min_length=8, max_length=128, example="novasenha123")
+    email: Optional[EmailStr] = Field(None, example="novoemail@exemplo.com")  # <- adiciona isso aqui
 
 class UserOut(UserBase):
     id: int = Field(..., example=1)

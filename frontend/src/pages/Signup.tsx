@@ -22,9 +22,12 @@ const RegisterPage = () => {
     try {
       const response = await fetch("http://localhost:8000/api/users/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(formData),
       });
+      
 
       if (response.ok) {
         alert("Cadastro realizado com sucesso!");
@@ -34,9 +37,8 @@ const RegisterPage = () => {
         setError(data.detail || "Erro ao cadastrar.");
       }
     } catch (err: any) {
-      setError("Erro de conexão: " + err.message);
-    } finally {
-      setIsLoading(false);
+      const data = await err.response?.json?.();
+      setError(data?.detail || "Erro de conexão.");
     }
   };
 
@@ -50,7 +52,13 @@ const RegisterPage = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
-            {error && <p className="text-red-500 text-sm">{error}</p>}
+          {Array.isArray(error) ? (
+  error.map((e: any, i) => (
+    <p key={i} className="text-red-500 text-sm">{e.msg}</p>
+  ))
+) : (
+  error && <p className="text-red-500 text-sm">{error}</p>
+)}
 
             <div className="space-y-1">
               <label htmlFor="name" className="text-[#4a7bc1] block text-sm font-medium text-azul-texto">
