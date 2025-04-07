@@ -21,7 +21,7 @@ const Login = () => {
       const data = await response.json();
       if (response.ok) {
         localStorage.setItem("token", data.access_token);
-        localStorage.setItem("userEmail", email); // <- Aqui está o segredo
+        localStorage.setItem("userEmail", email);
         alert("Login bem-sucedido!");
 
         setTimeout(() => {
