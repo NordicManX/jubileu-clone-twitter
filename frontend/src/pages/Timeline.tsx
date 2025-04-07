@@ -2,9 +2,15 @@ import { useEffect, useState } from "react";
 
 interface Tweet {
   id: number;
-  autor: string;
-  conteudo: string;
-  data: string;
+  content: string;
+  created_at: string;
+  owner_id: number;
+  owner: {
+    id: number;
+    name: string;
+    email: string;
+    created_at: string;
+  };
   curtidas?: number;
 }
 
@@ -16,69 +22,64 @@ const Timeline = () => {
   const [curtidos, setCurtidos] = useState<{ [tweetId: number]: boolean }>({});
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [tweetEditado, setTweetEditado] = useState("");
+  const [seguindo, setSeguindo] = useState<boolean>(false);
 
   useEffect(() => {
-    const tweetsMockados: Tweet[] = [
-      {
-        id: 1,
-        autor: "Enzo Gouveia",
-        conteudo: "Primeiro tweet no Jubileu! 🎉",
-        data: "2025-03-31 10:32",
-        curtidas: 1,
-      },
-      {
-        id: 2,
-        autor: "Maria Silva",
-        conteudo: "Esse clone do Twitter tá ficando top demais! 🚀",
-        data: "2025-03-31 11:15",
-        curtidas: 0,
-      },
-      {
-        id: 3,
-        autor: "João Pedro",
-        conteudo: "Bom dia, devs! 💻☕",
-        data: "2025-03-31 12:01",
-        curtidas: 3,
-      },
-    ];
+    const fetchData = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/tweets/");
+        const data = await res.json();
+        setTweets(data);
+      } catch (error) {
+        console.error("Erro ao buscar tweets:", error);
+      }
 
-    const storedTweets = localStorage.getItem("tweets");
-    if (storedTweets) {
-      setTweets(JSON.parse(storedTweets));
-    } else {
-      setTweets(tweetsMockados);
-    }
+      const storedEmail = localStorage.getItem("userEmail");
+      const storedName = localStorage.getItem("userName");
+      const isFollowing = localStorage.getItem("isFollowingPage");
 
-    const storedEmail = localStorage.getItem("userEmail");
-    const storedName = localStorage.getItem("userName");
+      if (storedEmail) setUserEmail(storedEmail);
+      if (storedName) setUserName(storedName);
+      if (isFollowing === "true") setSeguindo(true);
+    };
 
-    if (storedEmail) setUserEmail(storedEmail);
-    if (storedName) setUserName(storedName);
+    fetchData();
   }, []);
 
   useEffect(() => {
     localStorage.setItem("tweets", JSON.stringify(tweets));
   }, [tweets]);
 
-  const handleNovoTweet = () => {
+  const handleNovoTweet = async () => {
     if (novoTweet.trim() === "") return;
 
-    const novo: Tweet = {
-      id: tweets.length + 1,
-      autor: userName || "Desconhecido",
-      conteudo: novoTweet,
-      data: new Date().toLocaleString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      curtidas: 0,
-    };
+    const token = localStorage.getItem("token");
 
-    setTweets([novo, ...tweets]);
-    setNovoTweet("");
+    if (!token) {
+      alert("Você precisa estar logado para postar.");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:8000/tweets/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: novoTweet }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Erro ao criar tweet");
+      }
+
+      const tweetCriado = await res.json();
+      setTweets([tweetCriado, ...tweets]);
+      setNovoTweet("");
+    } catch (error) {
+      console.error("Erro ao criar tweet:", error);
+    }
   };
 
   const handleCurtir = (tweetId: number) => {
@@ -105,13 +106,13 @@ const Timeline = () => {
 
   const handleEditar = (tweet: Tweet) => {
     setEditandoId(tweet.id);
-    setTweetEditado(tweet.conteudo);
+    setTweetEditado(tweet.content);
   };
 
   const handleSalvarEdicao = (tweetId: number) => {
     setTweets((prev) =>
       prev.map((tweet) =>
-        tweet.id === tweetId ? { ...tweet, conteudo: tweetEditado } : tweet
+        tweet.id === tweetId ? { ...tweet, content: tweetEditado } : tweet
       )
     );
     setEditandoId(null);
@@ -133,7 +134,15 @@ const Timeline = () => {
   const handleLogout = () => {
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userName");
+    localStorage.removeItem("token");
     window.location.href = "/";
+  };
+
+  const handleSeguirPagina = () => {
+    if (!seguindo) {
+      setSeguindo(true);
+      localStorage.setItem("isFollowingPage", "true");
+    }
   };
 
   return (
@@ -144,8 +153,26 @@ const Timeline = () => {
           <h2 className="text-2xl font-bold text-[#4a7bc1] mb-2">Perfil</h2>
           <div className="bg-blue-100 rounded-full w-20 h-20 mx-auto mb-4" />
           <p className="text-gray-700">Nome:</p>
-          <p className="font-medium text-azul-texto break-words">{userName || "Desconhecido"}</p>
+          <p className="font-medium text-[#4a7bc1] break-words">
+            {userName || userEmail?.split("@")[0] || "Desconhecido"}
+          </p>
+
+          {/* Botão de seguir */}
+          <div className="mt-6">
+            <button
+              onClick={handleSeguirPagina}
+              disabled={seguindo}
+              className={`px-4 py-2 rounded-full font-medium transition-all ${
+                seguindo
+                  ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                  : "bg-[#4a7bc1] text-white hover:bg-[#3a65a1]"
+              }`}
+            >
+              {seguindo ? "Seguindo ✅" : "Seguir"}
+            </button>
+          </div>
         </div>
+
         <button
           onClick={handleLogout}
           className="mt-4 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-full transition-all"
@@ -188,8 +215,8 @@ const Timeline = () => {
                 className="border border-azul-cremoso-DEFAULT rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-all"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="font-semibold text-[#4a7bc1]">{tweet.autor}</h2>
-                  <span className="text-sm text-[#7aaae8]">{tweet.data}</span>
+                  <h2 className="font-semibold text-[#4a7bc1]">{tweet.owner?.name || "Desconhecido"}</h2>
+                  <span className="text-sm text-[#7aaae8]">{new Date(tweet.created_at).toLocaleString()}</span>
                 </div>
 
                 {editandoId === tweet.id ? (
@@ -199,38 +226,26 @@ const Timeline = () => {
                     onChange={(e) => setTweetEditado(e.target.value)}
                   />
                 ) : (
-                  <p className="text-[#4a7bc1] mb-4">{tweet.conteudo}</p>
+                  <p className="text-[#4a7bc1] mb-4">{tweet.content}</p>
                 )}
 
                 <div className="flex gap-4 text-sm">
-                  {tweet.autor === userName && (
+                  {tweet.owner?.name === userName && (
                     editandoId === tweet.id ? (
                       <>
-                        <button
-                          onClick={() => handleSalvarEdicao(tweet.id)}
-                          className="text-green-600 hover:underline"
-                        >
+                        <button onClick={() => handleSalvarEdicao(tweet.id)} className="text-green-600 hover:underline">
                           Salvar
                         </button>
-                        <button
-                          onClick={handleCancelarEdicao}
-                          className="text-gray-500 hover:underline"
-                        >
+                        <button onClick={handleCancelarEdicao} className="text-gray-500 hover:underline">
                           Cancelar
                         </button>
                       </>
                     ) : (
                       <>
-                        <button
-                          onClick={() => handleEditar(tweet)}
-                          className="text-blue-600 hover:underline"
-                        >
+                        <button onClick={() => handleEditar(tweet)} className="text-blue-600 hover:underline">
                           Editar
                         </button>
-                        <button
-                          onClick={() => handleExcluir(tweet.id)}
-                          className="text-red-500 hover:underline"
-                        >
+                        <button onClick={() => handleExcluir(tweet.id)} className="text-red-500 hover:underline">
                           Excluir
                         </button>
                       </>
@@ -241,9 +256,7 @@ const Timeline = () => {
                   <button
                     onClick={() => handleCurtir(tweet.id)}
                     className={`flex items-center gap-1 font-medium ${
-                      curtidos[tweet.id]
-                        ? "text-red-500"
-                        : "text-[#4a7bc1] hover:text-red-500"
+                      curtidos[tweet.id] ? "text-red-500" : "text-[#4a7bc1] hover:text-red-500"
                     }`}
                   >
                     {curtidos[tweet.id] ? "❤️" : "♡"}
