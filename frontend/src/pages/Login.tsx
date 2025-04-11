@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -22,23 +24,25 @@ const Login = () => {
       if (response.ok) {
         localStorage.setItem("token", data.access_token);
         localStorage.setItem("userEmail", email);
-        alert("Login bem-sucedido!");
+
+        toast.success("Login bem-sucedido! Redirecionando...");
 
         setTimeout(() => {
           navigate("/timeline");
         }, 4000);
       } else {
-        alert("Erro: " + data.detail);
+        toast.error("Erro: " + data.detail);
         setIsLoading(false);
       }
     } catch (error: any) {
-      alert("Erro de conexão: " + error.message);
+      toast.error("Erro de conexão: " + error.message);
       setIsLoading(false);
     }
   };
 
   return (
     <div className="w-screen h-screen flex items-center justify-center">
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
       <div className="w-full max-w-md mx-auto">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-azul-cremoso-DEFAULT">
           <div className="bg-gradient-to-r from-azul-cremoso-DEFAULT to-azul-cremoso-dark p-8 text-center">
