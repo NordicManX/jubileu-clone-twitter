@@ -90,7 +90,14 @@ const CreateTweet = () => {
           {content && (
             <div className="bg-gray-100 border border-gray-300 p-4 rounded-xl">
               <p className="text-sm text-gray-600 mb-1">Prévia do Tweet:</p>
-              <ReactMarkdown className="prose">{content}</ReactMarkdown>
+              <ReactMarkdown
+  components={{
+    p: ({ node, ...props }) => <p className="prose" {...props} />,
+  }}
+>
+  {content}
+</ReactMarkdown>
+
             </div>
           )}
 
