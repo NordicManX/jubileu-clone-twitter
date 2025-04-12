@@ -22,10 +22,10 @@ app.include_router(users_router)
 app.include_router(tweets_router)
 
 # Servir arquivos estáticos do frontend
-frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../frontend/build"))
-app.mount("/static", StaticFiles(directory=os.path.join(frontend_path, "static")), name="static")
+frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../frontend/dist"))
+app.mount("/static", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="static")
 
-# Servir index.html na raizcd
+# Servir index.html na raiz
 @app.get("/")
 def read_index():
     return FileResponse(os.path.join(frontend_path, "index.html"))
