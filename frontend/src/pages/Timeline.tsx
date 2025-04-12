@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { MoreHorizontal, Share2, Edit, Trash2 } from "lucide-react";
+import Sidebar from "../components/Sidebar"; // ajuste o caminho conforme necessário
 
 interface Tweet {
   id: number;
@@ -23,6 +25,10 @@ const Timeline = () => {
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [tweetEditado, setTweetEditado] = useState("");
   const [seguindo, setSeguindo] = useState<boolean>(false);
+  const [menuAberto, setMenuAberto] = useState<number | null>(null);
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [novoNome, setNovoNome] = useState("");
+  const [novoEmail, setNovoEmail] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,9 +58,12 @@ const Timeline = () => {
 
   const handleNovoTweet = async () => {
     if (novoTweet.trim() === "") return;
+    if (novoTweet.length > 280) {
+      alert("Seu tweet ultrapassa o limite de 280 caracteres.");
+      return;
+    }
 
     const token = localStorage.getItem("token");
-
     if (!token) {
       alert("Você precisa estar logado para postar.");
       return;
@@ -70,9 +79,7 @@ const Timeline = () => {
         body: JSON.stringify({ content: novoTweet }),
       });
 
-      if (!res.ok) {
-        throw new Error("Erro ao criar tweet");
-      }
+      if (!res.ok) throw new Error("Erro ao criar tweet");
 
       const tweetCriado = await res.json();
       setTweets([tweetCriado, ...tweets]);
@@ -82,20 +89,30 @@ const Timeline = () => {
     }
   };
 
+  useEffect(() => {
+    const handleClickForaDoMenu = (event: MouseEvent) => {
+      const menuAbertoElement = document.getElementById(`menu-${menuAberto}`);
+      if (menuAberto && menuAbertoElement && !menuAbertoElement.contains(event.target as Node)) {
+        setMenuAberto(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickForaDoMenu);
+    return () => document.removeEventListener("mousedown", handleClickForaDoMenu);
+  }, [menuAberto]);
+
   const handleCurtir = (tweetId: number) => {
     setTweets((prevTweets) =>
-      prevTweets.map((tweet) => {
-        if (tweet.id === tweetId) {
-          const jaCurtiu = curtidos[tweetId];
-          return {
-            ...tweet,
-            curtidas: jaCurtiu
-              ? (tweet.curtidas || 0) - 1
-              : (tweet.curtidas || 0) + 1,
-          };
-        }
-        return tweet;
-      })
+      prevTweets.map((tweet) =>
+        tweet.id === tweetId
+          ? {
+              ...tweet,
+              curtidas: curtidos[tweetId]
+                ? (tweet.curtidas || 0) - 1
+                : (tweet.curtidas || 0) + 1,
+            }
+          : tweet
+      )
     );
 
     setCurtidos((prev) => ({
@@ -107,16 +124,38 @@ const Timeline = () => {
   const handleEditar = (tweet: Tweet) => {
     setEditandoId(tweet.id);
     setTweetEditado(tweet.content);
+    setMenuAberto(null);
   };
 
-  const handleSalvarEdicao = (tweetId: number) => {
-    setTweets((prev) =>
-      prev.map((tweet) =>
-        tweet.id === tweetId ? { ...tweet, content: tweetEditado } : tweet
-      )
-    );
-    setEditandoId(null);
-    setTweetEditado("");
+  const handleSalvarEdicao = async (tweetId: number) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Você precisa estar logado para editar.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:8000/tweets/${tweetId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: tweetEditado }),
+      });
+
+      if (!res.ok) throw new Error("Erro ao salvar tweet editado");
+
+      setTweets((prev) =>
+        prev.map((tweet) =>
+          tweet.id === tweetId ? { ...tweet, content: tweetEditado } : tweet
+        )
+      );
+      setEditandoId(null);
+      setTweetEditado("");
+    } catch (error) {
+      console.error("Erro ao salvar edição:", error);
+    }
   };
 
   const handleCancelarEdicao = () => {
@@ -124,10 +163,28 @@ const Timeline = () => {
     setTweetEditado("");
   };
 
-  const handleExcluir = (tweetId: number) => {
-    const confirmar = window.confirm("Tem certeza que deseja excluir este tweet?");
-    if (confirmar) {
+  const handleExcluir = async (tweetId: number) => {
+    if (!window.confirm("Tem certeza que deseja excluir este tweet?")) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Você precisa estar logado para excluir.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:8000/tweets/${tweetId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("Erro ao excluir tweet");
+
       setTweets((prev) => prev.filter((tweet) => tweet.id !== tweetId));
+    } catch (error) {
+      console.error("Erro ao excluir tweet:", error);
     }
   };
 
@@ -138,58 +195,30 @@ const Timeline = () => {
     window.location.href = "/";
   };
 
-  const handleSeguirPagina = () => {
-    if (!seguindo) {
-      setSeguindo(true);
-      localStorage.setItem("isFollowingPage", "true");
-    }
+  const salvarPerfil = () => {
+    setUserName(novoNome);
+    setUserEmail(novoEmail);
+    localStorage.setItem("userName", novoNome);
+    localStorage.setItem("userEmail", novoEmail);
+    setMostrarModal(false);
   };
 
   return (
     <div className="min-h-screen h-screen flex w-screen bg-[#4a7bc1] overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-80 bg-white border-r border-azul-cremoso-DEFAULT p-6 shadow-md hidden md:flex flex-col justify-between">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-[#4a7bc1] mb-2">Perfil</h2>
-          <div className="bg-blue-100 rounded-full w-20 h-20 mx-auto mb-4" />
-          <p className="text-gray-700">Nome:</p>
-          <p className="font-medium text-[#4a7bc1] break-words">
-            {userName || userEmail?.split("@")[0] || "Desconhecido"}
-          </p>
+      <Sidebar
+        userName={userName}
+        userEmail={userEmail}
+        seguindo={seguindo}
+        setSeguindo={setSeguindo}
+        setMostrarModal={setMostrarModal}
+        setNovoNome={setNovoNome}
+        setNovoEmail={setNovoEmail}
+        handleLogout={handleLogout}
+      />
 
-          {/* Botão de seguir */}
-          <div className="mt-6">
-            <button
-              onClick={handleSeguirPagina}
-              disabled={seguindo}
-              className={`px-4 py-2 rounded-full font-medium transition-all ${
-                seguindo
-                  ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                  : "bg-[#4a7bc1] text-white hover:bg-[#3a65a1]"
-              }`}
-            >
-              {seguindo ? "Seguindo ✅" : "Seguir"}
-            </button>
-          </div>
-        </div>
-
-        <button
-          onClick={handleLogout}
-          className="mt-4 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-full transition-all"
-        >
-          Sair
-        </button>
-      </aside>
-
-      {/* Timeline */}
       <main className="flex-1 h-full overflow-y-auto p-6">
         <div className="bg-white rounded-2xl shadow-xl border border-azul-cremoso-DEFAULT h-full w-full flex flex-col">
-          <div className="bg-gradient-to-r from-azul-cremoso-DEFAULT to-azul-cremoso-dark p-6 rounded-t-2xl text-center">
-            <h1 className="text-3xl font-bold text-[#4a7bc1]">Timeline</h1>
-            <p className="text-[#7aaae8]/90 mt-1">Veja o que a galera anda postando</p>
-          </div>
-
-          {/* Box de criação de tweet */}
+          <div className="bg-gradient-to-r from-azul-cremoso-DEFAULT to-azul-cremoso-dark p-6 rounded-t-2xl text-center" />
           <div className="p-6 border-b border-azul-cremoso-DEFAULT bg-[#f9fbff]">
             <textarea
               className="w-full h-28 resize-none border border-azul-cremoso-DEFAULT rounded-xl p-4 text-[#4a7bc1] bg-white placeholder-[#a0bfe8] shadow-sm focus:outline-none focus:ring-2 focus:ring-azul-cremoso-dark"
@@ -207,16 +236,43 @@ const Timeline = () => {
             </div>
           </div>
 
-          {/* Lista de tweets */}
           <div className="p-6 space-y-6 flex-1 overflow-y-auto">
             {tweets.map((tweet) => (
               <div
                 key={tweet.id}
-                className="border border-azul-cremoso-DEFAULT rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-all"
+                className="border border-azul-cremoso-DEFAULT rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-all relative"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="font-semibold text-[#4a7bc1]">{tweet.owner?.name || "Desconhecido"}</h2>
-                  <span className="text-sm text-[#7aaae8]">{new Date(tweet.created_at).toLocaleString()}</span>
+                  <h2 className="font-semibold text-[#4a7bc1]">
+                    {tweet.owner?.name || "Desconhecido"}
+                  </h2>
+                  <div className="relative">
+                    <MoreHorizontal
+                      className="w-5 h-5 cursor-pointer"
+                      onClick={() =>
+                        setMenuAberto((prev) =>
+                          prev === tweet.id ? null : tweet.id
+                        )
+                      }
+                    />
+                    {menuAberto === tweet.id &&
+                      tweet.owner_id === Number(localStorage.getItem("userId")) && (
+                        <div className="absolute right-0 mt-2 bg-white border rounded shadow-md z-10 w-32">
+                          <button
+                            onClick={() => handleEditar(tweet)}
+                            className="flex items-center gap-2 px-4 py-2 w-full text-sm text-left text-blue-600 hover:bg-blue-50"
+                          >
+                            <Edit className="w-4 h-4" /> Editar
+                          </button>
+                          <button
+                            onClick={() => handleExcluir(tweet.id)}
+                            className="flex items-center gap-2 px-4 py-2 w-full text-sm text-left text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" /> Remover
+                          </button>
+                        </div>
+                      )}
+                  </div>
                 </div>
 
                 {editandoId === tweet.id ? (
@@ -229,34 +285,33 @@ const Timeline = () => {
                   <p className="text-[#4a7bc1] mb-4">{tweet.content}</p>
                 )}
 
-                <div className="flex gap-4 text-sm">
-                  {tweet.owner?.name === userName && (
-                    editandoId === tweet.id ? (
-                      <>
-                        <button onClick={() => handleSalvarEdicao(tweet.id)} className="text-green-600 hover:underline">
-                          Salvar
-                        </button>
-                        <button onClick={handleCancelarEdicao} className="text-gray-500 hover:underline">
-                          Cancelar
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={() => handleEditar(tweet)} className="text-blue-600 hover:underline">
-                          Editar
-                        </button>
-                        <button onClick={() => handleExcluir(tweet.id)} className="text-red-500 hover:underline">
-                          Excluir
-                        </button>
-                      </>
-                    )
-                  )}
+                {editandoId === tweet.id && (
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      onClick={() => handleSalvarEdicao(tweet.id)}
+                      className="text-green-600 hover:underline"
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      onClick={handleCancelarEdicao}
+                      className="text-gray-500 hover:underline"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
 
-                  <button className="text-[#4a7bc1] hover:underline">Compartilhar</button>
+                <div className="flex items-center gap-4 text-sm">
+                  <button className="text-[#4a7bc1] hover:text-[#3a65a1] flex items-center gap-1">
+                    <Share2 className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => handleCurtir(tweet.id)}
                     className={`flex items-center gap-1 font-medium ${
-                      curtidos[tweet.id] ? "text-red-500" : "text-[#4a7bc1] hover:text-red-500"
+                      curtidos[tweet.id]
+                        ? "text-red-500"
+                        : "text-[#4a7bc1] hover:text-red-500"
                     }`}
                   >
                     {curtidos[tweet.id] ? "❤️" : "♡"}
@@ -268,6 +323,42 @@ const Timeline = () => {
           </div>
         </div>
       </main>
+
+      {mostrarModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
+            <h2 className="text-xl font-semibold mb-4 text-[#4a7bc1]">Editar Perfil</h2>
+            <label className="block mb-2 text-sm text-[#4a7bc1]">Novo Nome</label>
+            <input
+              type="text"
+              className="w-full mb-4 p-2 border border-gray-300 rounded"
+              value={novoNome}
+              onChange={(e) => setNovoNome(e.target.value)}
+            />
+            <label className="block mb-2 text-sm text-[#4a7bc1]">Novo Email</label>
+            <input
+              type="email"
+              className="w-full mb-4 p-2 border border-gray-300 rounded"
+              value={novoEmail}
+              onChange={(e) => setNovoEmail(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setMostrarModal(false)}
+                className="text-gray-600 hover:underline"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarPerfil}
+                className="bg-azul-cremoso-DEFAULT hover:bg-azul-cremoso-dark text-white px-4 py-2 rounded"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

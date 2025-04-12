@@ -4,11 +4,16 @@ import Signup from "./pages/Signup";
 import PasswordForgot from "./pages/PasswordForgot";
 import CreateTweet from "./pages/CreateTweet";
 import Timeline from "./pages/Timeline";
-import PrivateRoute from "./components/PrivateRoute"; // ou onde você salvar
+import PrivateRoute from "./components/PrivateRoute";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
   return (
     <BrowserRouter>
+      {/* Toast global para toda a aplicação */}
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
+      
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
@@ -32,7 +37,6 @@ function App() {
             </PrivateRoute>
           }
         />
-        
       </Routes>
     </BrowserRouter>
   );
