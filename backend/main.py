@@ -4,31 +4,43 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 import os
 
-from routes import users, tweets  # ← Inclua todas as rotas que quiser usar
+# Importe os routers explicitamente para evitar erros
+from routes.users import router as users_router
+from routes.tweets import router as tweets_router  # se existir
 
 load_dotenv()
 
+# Configuração do banco de dados
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL não encontrada no .env")
 
 engine = create_engine(DATABASE_URL)
 
-app = FastAPI()
+# Criação do app FastAPI
+app = FastAPI(
+    title="Jubileu API",
+    description="API para o Twitter Clone",
+    version="1.0"
+)
 
-# CORS (libera acesso pro frontend Vite)
+# Configuração CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Ajusta se estiver em outra porta
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],  # Ambos para desenvolvimento
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Registra as rotas
-app.include_router(users.router, prefix="/api/users")
-app.include_router(tweets.router, prefix="/api/tweets")  # ← se tiver tweets
+# Registro das rotas (note que não usamos prefixo duplo)
+app.include_router(users_router)  # Já tem prefixo /api/users no próprio router
+app.include_router(tweets_router)  # Se existir
 
 @app.get("/")
-def read_root():
-    return {"message": "API do Jubileu rodando com frontend separado"}
+def health_check():
+    return {
+        "status": "online",
+        "docs": "http://localhost:8000/docs",
+        "message": "API do Jubileu (Twitter Clone) rodando"
+    }
