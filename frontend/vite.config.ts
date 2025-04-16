@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  base: '/',  // Para subdomínio root ou './' para subdiretório
   css: {
     postcss: './postcss.config.cjs'
   },
@@ -15,3 +16,5 @@ export default defineConfig({
     }
   }
 })
+
+
