@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 import os
+from pathlib import Path
 
 # Importe os routers explicitamente para evitar erros
 from routes.users import router as users_router
