@@ -15,9 +15,6 @@ from ..models import User
 from backend.database import get_db
 from backend.schemas import UserOut, UserUpdate
 
-
-
-
 # Configuração básica de logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -113,7 +110,16 @@ async def get_current_user(
     logger.info(f"Usuário autenticado com sucesso: {user.email}")
     return user
 
-# Rotas
+# Rotas para a raiz (GET e HEAD)
+@router.get("/")
+def read_root():
+    return {"message": "Hello World!"}
+
+@router.head("/")
+def head_root():
+    return {}
+
+# Rotas de usuário
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def register_user(user: UserCreate, request: Request, db: Session = Depends(get_db)):
     logger.info(f"Requisição de registro recebida. IP: {request.client.host}")
