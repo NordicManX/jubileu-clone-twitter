@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from pathlib import Path
 import logging
 
+
+
 # Configuração de logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from backend.models import User
-from database import get_db
+from backend.database import get_db
+
 
 # Carregar variáveis de ambiente
 load_dotenv()
