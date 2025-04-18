@@ -8,7 +8,8 @@ from pathlib import Path
 
 # Importa os routers explicitamente
 from .routes.users import router as users_router
-from routes.tweets import router as tweets_router
+from backend.routes.tweets import router as tweets_router
+
 
 
 # Configuração do logging
