@@ -11,7 +11,7 @@ import logging
 import os
 from dotenv import load_dotenv
 
-from models import User
+from ..models import User
 from database import get_db
 from schemas import UserOut, UserUpdate
 
