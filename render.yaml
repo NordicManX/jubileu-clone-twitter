@@ -1,11 +1,34 @@
+version: "1"
 services:
   - type: web
-    name: twitter-clone-api
+    name: jubileu-backend
     runtime: python
-    buildCommand: |
-      pip install -r requirements.txt
-    startCommand: |
-      uvicorn main:app --host 0.0.0.0 --port 10000
+    plan: free
+    region: oregon
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port 10000"
+    repo: https://github.com/NordicManX/jubileu-clone-twitter
+    branch: main
+    autoDeploy: true
     envVars:
-      - key: DATABASE_URL
-        value: postgresql://user:pass@host:5432/db
+      - key: EXTERNAL_DB_URL
+        fromDatabase:
+          name: twitter-clone-db
+          property: connectionString
+      - key: SECRET_KEY
+        value: sua_chave_super_secreta
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+
+databases:
+  - name: twitter-clone-db
+    databaseName: twitter_clone_db_9z5p
+    user: twitter_clone_db_9z5p_user
+    plan: free
+    region: virginia
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
+    postgresMajorVersion: "16"

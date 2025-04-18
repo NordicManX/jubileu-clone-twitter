@@ -5,35 +5,19 @@ from sqlalchemy import create_engine, text
 import os
 from pathlib import Path
 
-# Importe os routers explicitamente para evitar erros
+# Importa os routers explicitamente
 from routes.users import router as users_router
-from routes.tweets import router as tweets_router  # se existir
+from routes.tweets import router as tweets_router
 
 # Carrega as variáveis do .env
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(dotenv_path=BASE_DIR / ".env")
 
-# Testa a leitura das variáveis
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
+# Carrega a URL completa do banco de dados
+DATABASE_URL = os.getenv("EXTERNAL_DB_URL")
 
-# Imprime as variáveis para garantir que estão sendo carregadas corretamente (remover para produção)
-print(f"DB_HOST: {DB_HOST}")
-print(f"DB_PORT: {DB_PORT}")
-print(f"DB_NAME: {DB_NAME}")
-print(f"DB_USER: {DB_USER}")
-# Nunca imprima senhas em produção
-# print(f"DB_PASSWORD: {DB_PASSWORD}")
-
-# Verifica se todas as variáveis foram carregadas
-if not all([DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD]):
-    raise ValueError("Variáveis de banco de dados não encontradas no .env")
-
-# Monta a DATABASE_URL usando as variáveis separadas
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+if not DATABASE_URL:
+    raise ValueError("EXTERNAL_DB_URL não encontrada no .env")
 
 # Criação do engine do banco de dados
 engine = create_engine(DATABASE_URL)
@@ -58,9 +42,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",  # Certifique-se de que o front-end está rodando nessa URL
-        "http://127.0.0.1:5173",  # Outra porta local
-        "https://jubileu-clone-twitter.onrender.com"  # URL de produção, se necessário
+        "http://localhost:5173",  # Quando estiver rodando localmente
+        "http://127.0.0.1:5173",  # Outra URL local
+        "https://jubileu-clone-twitter.onrender.com",  # URL de produção do backend
+        "https://seu-frontend-no-vercel.vercel.app",  # URL de produção do frontend
     ],
     allow_credentials=True,
     allow_methods=["*"],
