@@ -27,7 +27,6 @@ const RegisterPage = () => {
         },
         body: JSON.stringify(formData),
       });
-      
 
       if (response.ok) {
         alert("Cadastro realizado com sucesso!");
@@ -52,13 +51,13 @@ const RegisterPage = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          {Array.isArray(error) ? (
-  error.map((e: any, i) => (
-    <p key={i} className="text-red-500 text-sm">{e.msg}</p>
-  ))
-) : (
-  error && <p className="text-red-500 text-sm">{error}</p>
-)}
+            {Array.isArray(error) ? (
+              error.map((e: any, i) => (
+                <p key={i} className="text-red-500 text-sm">{e.msg}</p>
+              ))
+            ) : (
+              error && <p className="text-red-500 text-sm">{error}</p>
+            )}
 
             <div className="space-y-1">
               <label htmlFor="name" className="text-[#4a7bc1] block text-sm font-medium text-azul-texto">

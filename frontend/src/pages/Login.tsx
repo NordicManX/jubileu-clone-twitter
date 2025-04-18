@@ -9,32 +9,59 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
+  const apiUrl = import.meta.env.VITE_API_URL;
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/users/login", {
+      const response = await fetch(`${apiUrl}/api/users/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ username: email, password }),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          username: email, // Envia o 'username' como 'email'
+          password,
+        }),
       });
 
-      const data = await response.json();
-      if (response.ok) {
+      // Verificando o status da resposta
+      if (!response.ok) {
+        const errorText = await response.text(); // Obtém o texto da resposta
+        console.error("Erro na resposta:", errorText); // Log para debug
+        throw new Error(errorText || "Erro ao fazer login.");
+      }
+
+      const contentType = response.headers.get("content-type");
+      let data: any;
+
+      // Verifica se o conteúdo é JSON
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        console.error("Resposta não é JSON:", await response.text()); // Log para debug
+        throw new Error("Resposta inesperada do servidor.");
+      }
+
+      if (data?.access_token) {
         localStorage.setItem("token", data.access_token);
         localStorage.setItem("userEmail", email);
+        if (data.user) {
+          localStorage.setItem("user", JSON.stringify(data.user));
+        }
 
         toast.success("Login bem-sucedido! Redirecionando...");
 
         setTimeout(() => {
           navigate("/timeline");
-        }, 4000);
+        }, 3000);
       } else {
-        toast.error("Erro: " + data.detail);
-        setIsLoading(false);
+        throw new Error("Token de autenticação não recebido.");
       }
     } catch (error: any) {
+      console.error("Erro durante o login:", error); // Log para debug
       toast.error("Erro de conexão: " + error.message);
       setIsLoading(false);
     }
@@ -81,8 +108,8 @@ const Login = () => {
               />
 
               <div className="text-right pt-1">
-                <Link 
-                  to="/recuperar-senha" 
+                <Link
+                  to="/recuperar-senha"
                   className="text-sm text-azul-cremoso-dark hover:text-azul-texto hover:underline transition-colors"
                 >
                   Esqueceu sua senha?
@@ -94,16 +121,32 @@ const Login = () => {
               type="submit"
               disabled={isLoading}
               className={`w-full py-3 px-4 rounded-lg font-semibold text-white shadow-md transition-all ${
-                isLoading 
-                  ? "bg-azul-cremoso-DEFAULT cursor-not-allowed" 
+                isLoading
+                  ? "bg-azul-cremoso-DEFAULT cursor-not-allowed"
                   : "bg-azul-cremoso-dark hover:bg-azul-texto hover:shadow-lg"
               }`}
             >
               {isLoading ? (
                 <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   Redirecionando...
                 </span>
@@ -115,8 +158,8 @@ const Login = () => {
             <div className="text-center pt-4">
               <p className="text-sm text-[#7aaae8]">
                 Não tem uma conta?{" "}
-                <Link 
-                  to="/cadastro" 
+                <Link
+                  to="/cadastro"
                   className="text-right font-semibold text-azul-cremoso-dark hover:text-azul-texto hover:underline transition-colors"
                 >
                   Cadastre-se

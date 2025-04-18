@@ -11,6 +11,9 @@ const CreateTweet = () => {
   const [charLimit] = useState(280);
   const navigate = useNavigate();
 
+  // URL da API a partir das variáveis de ambiente (configuração Vite)
+  const apiUrl = import.meta.env.VITE_API_URL;
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) navigate("/login"); // Rota protegida
@@ -22,7 +25,7 @@ const CreateTweet = () => {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:8000/api/tweets", {
+      const response = await fetch(`${apiUrl}/api/tweets`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -37,7 +40,7 @@ const CreateTweet = () => {
         navigate("/feed");
       } else {
         const data = await response.json();
-        alert("Erro ao postar: " + data.detail);
+        alert("Erro ao postar: " + (data.detail || "Erro desconhecido"));
       }
     } catch (error: any) {
       alert("Erro de conexão: " + error.message);
@@ -91,13 +94,12 @@ const CreateTweet = () => {
             <div className="bg-gray-100 border border-gray-300 p-4 rounded-xl">
               <p className="text-sm text-gray-600 mb-1">Prévia do Tweet:</p>
               <ReactMarkdown
-  components={{
-    p: ({ node, ...props }) => <p className="prose" {...props} />,
-  }}
->
-  {content}
-</ReactMarkdown>
-
+                components={{
+                  p: ({ node, ...props }) => <p className="prose" {...props} />,
+                }}
+              >
+                {content}
+              </ReactMarkdown>
             </div>
           )}
 
