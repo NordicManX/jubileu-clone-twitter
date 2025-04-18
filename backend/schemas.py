@@ -16,13 +16,12 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=2, max_length=100, example="Novo Nome")
     password: Optional[str] = Field(None, min_length=8, max_length=128, example="novasenha123")
-    email: Optional[EmailStr] = Field(None, example="novoemail@exemplo.com")  # <- adiciona isso aqui
+    email: Optional[EmailStr] = Field(None, example="novoemail@exemplo.com")
 
 class UserOut(UserBase):
     id: int = Field(..., example=1)
     name: str
     created_at: datetime = Field(..., example="2023-01-01T00:00:00Z")
-    # Removido updated_at que não existe no banco
     
     model_config = ConfigDict(
         from_attributes=True,
@@ -53,10 +52,8 @@ class TweetOut(TweetBase):
     id: int = Field(..., example=1)
     owner_id: int = Field(..., example=1)
     created_at: datetime = Field(..., example="2023-01-01T00:00:00Z")
-    # Removido updated_at do tweet se não existir no banco
     owner: 'UserOut'  # Usando string para evitar referência circular
-    created_at: datetime
-    
+
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
