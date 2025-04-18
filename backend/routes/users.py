@@ -12,7 +12,7 @@ import os
 from dotenv import load_dotenv
 
 from ..models import User
-from database import get_db
+from backend.database import get_db
 from schemas import UserOut, UserUpdate
 
 # Configuração básica de logging
