@@ -1,3 +1,4 @@
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -8,6 +9,11 @@ from pathlib import Path
 # Importa os routers explicitamente
 from routes.users import router as users_router
 from routes.tweets import router as tweets_router
+
+# Configuração do logging
+logging.basicConfig(level=logging.DEBUG)  # Define o nível de log global como DEBUG
+logger = logging.getLogger("uvicorn")
+logger.setLevel(logging.DEBUG)  # Define o nível de log para o Uvicorn
 
 # Carrega as variáveis do .env
 BASE_DIR = Path(__file__).resolve().parent
@@ -26,9 +32,9 @@ engine = create_engine(DATABASE_URL)
 try:
     with engine.connect() as connection:
         result = connection.execute(text("SELECT 1"))
-        print("Conexão com o banco de dados bem-sucedida!")
+        logger.info("Conexão com o banco de dados bem-sucedida!")
 except Exception as e:
-    print(f"Erro ao conectar com o banco de dados: {e}")
+    logger.error(f"Erro ao conectar com o banco de dados: {e}")
     raise
 
 # Criação do app FastAPI
@@ -59,8 +65,10 @@ app.include_router(tweets_router)
 # Rota de saúde
 @app.get("/")
 def health_check():
+    logger.debug("Requisição GET para a raiz recebida.")
     return {
         "status": "online",
         "docs": "http://localhost:8000/docs",
         "message": "API do Jubileu (Twitter Clone) rodando"
     }
+

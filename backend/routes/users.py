@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     logger.error("SECRET_KEY não configurada nas variáveis de ambiente")
     raise ValueError("SECRET_KEY não configurada nas variáveis de ambiente")
-    
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -179,6 +179,33 @@ async def login_for_access_token(
         }
     }
 
+@router.post("/login-json", response_model=Token)
+async def login_with_json(
+    credentials: UserLogin,
+    db: Session = Depends(get_db),
+):
+    user = authenticate_user(db, credentials.email, credentials.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email ou senha incorretos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "name": user.name,
+            "email": user.email,
+            "id": user.id
+        }
+    }
 
 @router.get("/me", response_model=UserOut)
 async def read_users_me(
@@ -199,7 +226,6 @@ async def update_user_info(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Session = Depends(get_db)
 ):
-    # Verificar se o usuário está tentando alterar o email para um já existente
     if user_data.email:
         db_user = get_user_by_email(db, user_data.email)
         if db_user and db_user.id != current_user.id:
@@ -208,7 +234,6 @@ async def update_user_info(
                 detail="O email fornecido já está em uso por outro usuário."
             )
 
-    # Atualizar os dados do usuário no banco de dados
     if user_data.name:
         current_user.name = user_data.name
     if user_data.email:
