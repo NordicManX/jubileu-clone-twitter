@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from models import Tweet, User
+from backend.models import Tweet, User
 from schemas import TweetCreate, TweetOut, TweetUpdate
 from database import get_db
 from auth import get_current_user  # <- Usando função padrão para validar token JWT
