@@ -1,11 +1,11 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Index  # Adicione Index aqui
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from .database import Base
-
+from backend.database import Base
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = {'extend_existing': True}  # Adicionado para evitar redefinição da tabela
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
@@ -18,6 +18,7 @@ class User(Base):
 
 class Tweet(Base):
     __tablename__ = "tweets"
+    __table_args__ = {'extend_existing': True}  # Adicionado para evitar redefinição da tabela
 
     id = Column(Integer, primary_key=True, index=True)
     content = Column(Text, nullable=False)
@@ -27,7 +28,7 @@ class Tweet(Base):
     # Índices
     __table_args__ = (
         Index('ix_tweets_owner_id', 'owner_id'),
-        # Remova a configuração de full-text search se não for usar agora
+        {'extend_existing': True},  # Para garantir que a tabela não seja redefinida
     )
     
     owner = relationship("User", back_populates="tweets")

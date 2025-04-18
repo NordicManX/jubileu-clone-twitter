@@ -10,6 +10,7 @@ from pathlib import Path
 from .routes.users import router as users_router
 from routes.tweets import router as tweets_router
 
+
 # Configuração do logging
 logging.basicConfig(level=logging.DEBUG)  # Define o nível de log global como DEBUG
 logger = logging.getLogger("uvicorn")
