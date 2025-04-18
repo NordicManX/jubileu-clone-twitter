@@ -1,7 +1,8 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Index  # Adicione Index aqui
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from database import Base
+from .database import Base
+
 
 class User(Base):
     __tablename__ = "users"
