@@ -1,22 +1,48 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
+from typing import Generator
 import os
+from dotenv import load_dotenv
+from pathlib import Path
 
-# Lê a variável DATABASE_URL do ambiente (.env local ou Railway)
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://nelson:admin@localhost:5432/twitter_clone")
+# Carrega as variáveis do .env
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(dotenv_path=BASE_DIR / ".env")
 
-# Cria o engine com base nessa URL
-engine = create_engine(DATABASE_URL)
+# Monta a URL do banco com base nas variáveis separadas
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+EXTERNAL_DB_URL = os.getenv("EXTERNAL_DB_URL")
 
-# Cria sessões para acessar o banco
+# Verifica se as variáveis internas foram carregadas corretamente
+if not all([DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD]) and not EXTERNAL_DB_URL:
+    print("⚠️ Variáveis de ambiente do banco não foram carregadas corretamente.")
+    raise ValueError("Nenhuma URL de banco de dados válida encontrada.")
+
+# Se as variáveis internas forem encontradas, usa elas. Caso contrário, usa a URL externa.
+if all([DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD]):
+    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+else:
+    DATABASE_URL = EXTERNAL_DB_URL
+
+# Cria engine com tratamento de erro
+try:
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+except Exception as e:
+    print("❌ Erro ao conectar com o banco de dados:")
+    print(e)
+    raise
+
+# Cria sessão e base
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Base para os modelos do banco
 Base = declarative_base()
 
-# Função que fornece a sessão do banco (usada nas rotas)
-def get_db():
+# Dependência para obter a sessão do banco
+def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:
         yield db
