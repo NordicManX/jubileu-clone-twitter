@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional, Annotated
-from fastapi import APIRouter, HTTPException, status, Depends, Request
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import APIRouter, HTTPException, status, Depends, Request, Form
+from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field
@@ -157,10 +157,11 @@ async def register_user(user: UserCreate, request: Request, db: Session = Depend
 
 @router.post("/login", response_model=Token)
 async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    email: str = Form(...),  # Agora aceitamos email no lugar de username
+    password: str = Form(...),  # E a senha
     db: Session = Depends(get_db),
 ):
-    user = authenticate_user(db, form_data.username, form_data.password)
+    user = authenticate_user(db, email, password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
