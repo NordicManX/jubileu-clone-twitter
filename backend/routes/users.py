@@ -164,4 +164,73 @@ async def login_for_access_token(
     user = authenticate_user(db, email, password)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário ou senha inválidos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+
+    return Token(access_token=access_token, token_type="bearer")
+
+@router.post("/login-json", response_model=Token)
+async def login_with_json(
+    credentials: UserLogin,
+    db: Session = Depends(get_db),
+):
+    user = authenticate_user(db, credentials.email, credentials.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário ou senha inválidos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+
+    return Token(access_token=access_token, token_type="bearer")
+
+@router.get("/me", response_model=UserOut)
+async def read_users_me(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)]
+):
+    logger.info(f"Requisição para perfil do usuário autenticado: {current_user.email}")
+    return {
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email,
+        "created_at": current_user.created_at.isoformat()
+    }
+
+@router.put("/me", response_model=UserOut)
+async def update_user_info(
+    user_data: UserUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+):
+    if user_data.email:
+        db_user = get_user_by_email(db, user_data.email)
+        if db_user and db_user.id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="O email fornecido já está em uso por outro usuário."
+            )
+
+    if user_data.name:
+        current_user.name = user_data.name
+    if user_data.email:
+        current_user.email = user_data.email
+    if user_data.password:
+        current_user.password = pwd_context.hash(user_data.password)
+
+    db.commit()
+    db.refresh(current_user)
+
+    return current_user
