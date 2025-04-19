@@ -68,6 +68,6 @@ def health_check():
     logger.debug("Requisição GET para a raiz recebida.")
     return {
         "status": "online",
-        "docs": "http://localhost:8000/docs",
+        "docs": os.getenv("API_DOCS_URL", "http://localhost:8000/docs"),  # URL dinâmica para docs
         "message": "API do Jubileu (Twitter Clone) rodando"
     }
