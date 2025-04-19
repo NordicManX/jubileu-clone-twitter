@@ -8,9 +8,7 @@ from pathlib import Path
 
 # Importa os routers explicitamente
 from .routes.users import router as users_router
-from backend.routes.tweets import router as tweets_router
-
-
+from .routes.tweets import router as tweets_router
 
 # Configuração do logging
 logging.basicConfig(level=logging.DEBUG)  # Define o nível de log global como DEBUG
@@ -53,7 +51,7 @@ app.add_middleware(
         "http://localhost:5173",  # Quando estiver rodando localmente
         "http://127.0.0.1:5173",  # Outra URL local
         "https://jubileu-clone-twitter.onrender.com",  # URL de produção do backend
-        "https://seu-frontend-no-vercel.vercel.app",  # URL de produção do frontend
+        "https://jubileu-clone-twitter-7y7dcfrrp-nordicmanxs-projects.vercel.app",  # URL do frontend na Vercel
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -73,4 +71,3 @@ def health_check():
         "docs": "http://localhost:8000/docs",
         "message": "API do Jubileu (Twitter Clone) rodando"
     }
-
