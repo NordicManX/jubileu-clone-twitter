@@ -14,6 +14,9 @@ export default defineConfig({
         'top-level-await': true 
       }
     }
+  },
+  preview: {
+    allowedHosts: ['jubileu-clone-twitter-1.onrender.com', 'localhost']
   }
 })
 
