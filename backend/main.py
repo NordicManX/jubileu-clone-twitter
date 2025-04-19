@@ -48,11 +48,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://jubileu-clone-twitter.onrender.com",  # backend
-        "https://jubileu-clone-twitter.vercel.app",  # 🚨 FALTANDO
-        "https://jubileu-clone-twitter-7y7dcfrrp-nordicmanxs-projects.vercel.app",  # preview
+        "http://localhost:5173",  # Quando estiver rodando localmente
+        "http://127.0.0.1:5173",  # Outra URL local
+        "https://jubileu-clone-twitter.onrender.com",  # URL de produção do backend
+        "https://jubileu-clone-twitter-7y7dcfrrp-nordicmanxs-projects.vercel.app",  # URL do frontend na Vercel
     ],
     allow_credentials=True,
     allow_methods=["*"],
