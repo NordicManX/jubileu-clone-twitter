@@ -10,7 +10,7 @@ const RecuperarSenha = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/users/recuperar-senha", {
+      const response = await fetch("https://jubileu-clone-twitter.onrender.com/api/users/recuperar-senha", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

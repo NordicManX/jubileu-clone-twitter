@@ -33,7 +33,7 @@ const Timeline = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch("http://localhost:8000/tweets/");
+        const res = await fetch("https://jubileu-clone-twitter.onrender.com/tweets/");
         const data = await res.json();
         setTweets(data);
       } catch (error) {
@@ -70,7 +70,7 @@ const Timeline = () => {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/tweets/", {
+      const res = await fetch("https://jubileu-clone-twitter.onrender.com/tweets/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
