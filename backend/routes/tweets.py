@@ -2,8 +2,8 @@ from datetime import datetime
 from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from backend.models import Tweet, User
-from backend.schemas import TweetCreate, TweetOut, TweetUpdate
+from backend.models import Tweet, User, Comment  # Adicionando o modelo Comment
+from backend.schemas import TweetCreate, TweetOut, TweetUpdate, CommentCreate, CommentOut  # Adicionando os esquemas de Comment
 from backend.database import get_db
 from backend.auth import get_current_user
 
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/tweets", tags=["Tweets"])
 @router.post("/", response_model=TweetOut, status_code=status.HTTP_201_CREATED)
 async def create_tweet(
     tweet: TweetCreate,
-    current_user: Annotated[User, Depends(get_current_user)],  # <- Aqui
+    current_user: Annotated[User, Depends(get_current_user)],  # Obtendo o usuário autenticado
     db: Session = Depends(get_db)
 ):
     """
@@ -77,7 +77,7 @@ async def read_tweet(
 async def update_tweet(
     tweet_id: int,
     tweet_data: TweetUpdate,
-    current_user: Annotated[User, Depends(get_current_user)],  # <- Aqui também
+    current_user: Annotated[User, Depends(get_current_user)],  # Obtendo o usuário autenticado
     db: Session = Depends(get_db)
 ):
     """
@@ -100,7 +100,7 @@ async def update_tweet(
 @router.delete("/{tweet_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_tweet(
     tweet_id: int,
-    current_user: Annotated[User, Depends(get_current_user)],  # <- E aqui
+    current_user: Annotated[User, Depends(get_current_user)],  # Obtendo o usuário autenticado
     db: Session = Depends(get_db)
 ):
     """
@@ -118,3 +118,47 @@ async def delete_tweet(
     db.commit()
     
     return {"detail": "Tweet excluído com sucesso"}
+
+# **Rotas de Comentários**:
+
+@router.post("/{tweet_id}/comments/", response_model=CommentOut, status_code=status.HTTP_201_CREATED)
+async def create_comment(
+    tweet_id: int,
+    comment_data: CommentCreate,
+    current_user: Annotated[User, Depends(get_current_user)],  # Obtendo o usuário autenticado
+    db: Session = Depends(get_db)
+):
+    """
+    Cria um comentário para um tweet específico.
+    """
+    db_tweet = db.query(Tweet).filter(Tweet.id == tweet_id).first()
+    if not db_tweet:
+        raise HTTPException(status_code=404, detail="Tweet não encontrado")
+    
+    db_comment = Comment(
+        text=comment_data.text,
+        tweet_id=tweet_id,
+        user_id=current_user.id
+    )
+    
+    db.add(db_comment)
+    db.commit()
+    db.refresh(db_comment)
+    
+    return CommentOut.model_validate(db_comment)
+
+@router.get("/{tweet_id}/comments/", response_model=List[CommentOut])
+async def read_comments(
+    tweet_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Lista todos os comentários de um tweet.
+    """
+    db_tweet = db.query(Tweet).filter(Tweet.id == tweet_id).first()
+    if not db_tweet:
+        raise HTTPException(status_code=404, detail="Tweet não encontrado")
+    
+    comments = db.query(Comment).filter(Comment.tweet_id == tweet_id).all()
+    
+    return comments

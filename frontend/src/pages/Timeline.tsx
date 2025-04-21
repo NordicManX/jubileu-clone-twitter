@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { MoreHorizontal, Share2, Edit, Trash2 } from "lucide-react";
-import Sidebar from "../components/Sidebar"; // ajuste o caminho conforme necessário
+import Sidebar from "../components/Sidebar";
 
 interface Tweet {
   id: number;
@@ -246,13 +246,11 @@ const Timeline = () => {
                   <h2 className="font-semibold text-[#4a7bc1]">
                     {tweet.owner?.name || "Desconhecido"}
                   </h2>
-                  <div className="relative">
+                  <div className="relative" id={`menu-${tweet.id}`}>
                     <MoreHorizontal
                       className="w-5 h-5 cursor-pointer"
                       onClick={() =>
-                        setMenuAberto((prev) =>
-                          prev === tweet.id ? null : tweet.id
-                        )
+                        setMenuAberto((prev) => (prev === tweet.id ? null : tweet.id))
                       }
                     />
                     {menuAberto === tweet.id &&
@@ -314,8 +312,7 @@ const Timeline = () => {
                         : "text-[#4a7bc1] hover:text-red-500"
                     }`}
                   >
-                    {curtidos[tweet.id] ? "❤️" : "♡"}
-                    <span>{tweet.curtidas || 0}</span>
+                    ❤️ {tweet.curtidas || 0}
                   </button>
                 </div>
               </div>
@@ -323,42 +320,6 @@ const Timeline = () => {
           </div>
         </div>
       </main>
-
-      {mostrarModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
-            <h2 className="text-xl font-semibold mb-4 text-[#4a7bc1]">Editar Perfil</h2>
-            <label className="block mb-2 text-sm text-[#4a7bc1]">Novo Nome</label>
-            <input
-              type="text"
-              className="w-full mb-4 p-2 border border-gray-300 rounded"
-              value={novoNome}
-              onChange={(e) => setNovoNome(e.target.value)}
-            />
-            <label className="block mb-2 text-sm text-[#4a7bc1]">Novo Email</label>
-            <input
-              type="email"
-              className="w-full mb-4 p-2 border border-gray-300 rounded"
-              value={novoEmail}
-              onChange={(e) => setNovoEmail(e.target.value)}
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setMostrarModal(false)}
-                className="text-gray-600 hover:underline"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={salvarPerfil}
-                className="bg-azul-cremoso-DEFAULT hover:bg-azul-cremoso-dark text-white px-4 py-2 rounded"
-              >
-                Salvar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

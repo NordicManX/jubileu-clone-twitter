@@ -75,6 +75,40 @@ class TweetSimpleOut(BaseModel):
     )
 
 # ----------------------------
+# Modelos de Comentários
+# ----------------------------
+
+class CommentBase(BaseModel):
+    text: str = Field(..., min_length=1, max_length=1000, example="Conteúdo do comentário")
+
+class CommentCreate(CommentBase):
+    tweet_id: int = Field(..., example=1)
+    user_id: int = Field(..., example=1)
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "description": "Modelo para criação de novos comentários"
+        }
+    )
+
+class CommentOut(CommentBase):
+    id: int
+    tweet_id: int
+    user_id: int
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "description": "Modelo completo de saída para comentários"
+        }
+    )
+
+# ----------------------------
 # Modelos de Autenticação
 # ----------------------------
 
@@ -91,13 +125,54 @@ class TokenData(BaseModel):
 
 class UserWithTweets(UserOut):
     tweets: List[TweetSimpleOut] = Field(default_factory=list)
-    
+    comments: List[CommentOut] = Field(default_factory=list)
+
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
-            "description": "Modelo de usuário incluindo seus tweets"
+            "description": "Modelo de usuário incluindo seus tweets e comentários"
         }
     )
 
 # Resolve a referência circular após a definição
 TweetOut.update_forward_refs()
+CommentOut.update_forward_refs()
+
+# ----------------------------
+# Modelos de Seguir Usuário
+# ----------------------------
+
+class FollowBase(BaseModel):
+    follower_id: int = Field(..., example=1)
+    following_id: int = Field(..., example=2)
+
+class FollowCreate(FollowBase):
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "description": "Modelo para seguir um usuário"
+        }
+    )
+
+class FollowOut(FollowBase):
+    id: int
+    created_at: datetime
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "description": "Modelo de saída para seguidores"
+        }
+    )
+
+class UserWithFollows(UserOut):
+    followers: List[UserOut] = Field(default_factory=list)
+    following: List[UserOut] = Field(default_factory=list)
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "description": "Usuário com informações de seguidores e seguidos"
+        }
+    )
+
