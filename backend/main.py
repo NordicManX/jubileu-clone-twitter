@@ -40,9 +40,14 @@ except Exception as e:
 # Criação do app FastAPI
 app = FastAPI()
 
-origins = [
-    "https://jubileu-clone-twitter-1.onrender.com",  # domínio do frontend
-]
+allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://jubileu-clone-twitter.onrender.com",
+        "https://jubileu-clone-twitter-7y7dcfrrp-nordicmanxs-projects.vercel.app",
+        "https://jubileu-clone-twitter-1.onrender.com",  # << ADICIONE ESTA LINHA
+    ],
+
 
 app.add_middleware(
     CORSMiddleware,

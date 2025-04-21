@@ -1,7 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
+interface LoginResponse {
+  access_token: string;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    // outros campos, se necessário
+  };
+}
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -10,12 +20,18 @@ const Login = () => {
   const navigate = useNavigate();
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-console.log("API URL em uso:", apiUrl); // 👈 log de debug
+  console.log("API URL em uso:", apiUrl);
 
-
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      navigate("/timeline");
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isLoading) return;
     setIsLoading(true);
 
     try {
@@ -25,26 +41,24 @@ console.log("API URL em uso:", apiUrl); // 👈 log de debug
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: new URLSearchParams({
-          username: email, // Envia o 'username' como 'email'
+          username: email,
           password,
         }),
       });
 
-      // Verificando o status da resposta
       if (!response.ok) {
-        const errorText = await response.text(); // Obtém o texto da resposta
-        console.error("Erro na resposta:", errorText); // Log para debug
-        throw new Error(errorText || "Erro ao fazer login.");
+        const errorText = await response.text();
+        console.error("Erro na resposta:", errorText);
+        throw new Error("Erro ao fazer login. Verifique suas credenciais e tente novamente.");
       }
 
       const contentType = response.headers.get("content-type");
-      let data: any;
+      let data: LoginResponse;
 
-      // Verifica se o conteúdo é JSON
       if (contentType && contentType.includes("application/json")) {
         data = await response.json();
       } else {
-        console.error("Resposta não é JSON:", await response.text()); // Log para debug
+        console.error("Resposta não é JSON:", await response.text());
         throw new Error("Resposta inesperada do servidor.");
       }
 
@@ -56,7 +70,6 @@ console.log("API URL em uso:", apiUrl); // 👈 log de debug
         }
 
         toast.success("Login bem-sucedido! Redirecionando...");
-
         setTimeout(() => {
           navigate("/timeline");
         }, 3000);
@@ -64,8 +77,8 @@ console.log("API URL em uso:", apiUrl); // 👈 log de debug
         throw new Error("Token de autenticação não recebido.");
       }
     } catch (error: any) {
-      console.error("Erro durante o login:", error); // Log para debug
-      toast.error("Erro de conexão: " + error.message);
+      console.error("Erro durante o login:", error);
+      toast.error(error.message || "Erro ao fazer login. Tente novamente mais tarde.");
       setIsLoading(false);
     }
   };
@@ -88,6 +101,7 @@ console.log("API URL em uso:", apiUrl); // 👈 log de debug
               <input
                 type="email"
                 id="email"
+                aria-label="E-mail"
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -103,6 +117,7 @@ console.log("API URL em uso:", apiUrl); // 👈 log de debug
               <input
                 type="password"
                 id="password"
+                aria-label="Senha"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
