@@ -20,7 +20,6 @@ const Login = () => {
   const navigate = useNavigate();
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  console.log("API URL em uso:", apiUrl);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -79,6 +78,7 @@ const Login = () => {
     } catch (error: any) {
       console.error("Erro durante o login:", error);
       toast.error(error.message || "Erro ao fazer login. Tente novamente mais tarde.");
+    } finally {
       setIsLoading(false);
     }
   };
