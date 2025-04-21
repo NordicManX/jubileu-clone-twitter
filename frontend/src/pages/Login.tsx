@@ -41,7 +41,7 @@ const Login = () => {
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: new URLSearchParams({
-          username: email,
+          email,
           password,
         }),
       });
