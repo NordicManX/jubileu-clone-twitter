@@ -38,21 +38,15 @@ except Exception as e:
     raise
 
 # Criação do app FastAPI
-app = FastAPI(
-    title="Jubileu API",
-    description="API para o Twitter Clone",
-    version="1.0"
-)
+app = FastAPI()
 
-# Configuração CORS
+origins = [
+    "https://jubileu-clone-twitter-1.onrender.com",  # domínio do frontend
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Quando estiver rodando localmente
-        "http://127.0.0.1:5173",  # Outra URL local
-        "https://jubileu-clone-twitter.onrender.com",  # URL de produção do backend
-        "https://jubileu-clone-twitter-7y7dcfrrp-nordicmanxs-projects.vercel.app",  # URL do frontend na Vercel
-    ],
+    allow_origins=origins,  # ou ["*"] temporariamente para teste
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
