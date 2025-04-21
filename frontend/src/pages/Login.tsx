@@ -10,6 +10,8 @@ const Login = () => {
   const navigate = useNavigate();
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
+console.log("API URL em uso:", apiUrl); // 👈 log de debug
+
 
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
