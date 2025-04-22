@@ -17,6 +17,8 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const navigate = useNavigate();
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
@@ -32,6 +34,23 @@ const Login = () => {
     e.preventDefault();
     if (isLoading) return;
     setIsLoading(true);
+
+    // Reset errors
+    setEmailError("");
+    setPasswordError("");
+
+    // Simple validation
+    if (!email.includes("@")) {
+      setEmailError("Por favor, insira um e-mail válido.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setPasswordError("A senha deve ter pelo menos 6 caracteres.");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch(`${apiUrl}/api/users/login`, {
@@ -108,6 +127,7 @@ const Login = () => {
                 className="w-full px-5 py-3 rounded-lg border border-azul-cremoso-DEFAULT focus:ring-2 focus:ring-azul-cremoso-dark focus:border-transparent transition-all"
                 required
               />
+              {emailError && <p className="text-red-500 text-xs">{emailError}</p>}
             </div>
 
             <div className="space-y-1">
@@ -124,6 +144,7 @@ const Login = () => {
                 className="w-full px-5 py-3 rounded-lg border border-azul-cremoso-DEFAULT focus:ring-2 focus:ring-azul-cremoso-dark focus:border-transparent transition-all"
                 required
               />
+              {passwordError && <p className="text-red-500 text-xs">{passwordError}</p>}
 
               <div className="text-right pt-1">
                 <Link
