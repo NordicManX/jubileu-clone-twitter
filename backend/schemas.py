@@ -98,9 +98,6 @@ class CommentOut(CommentBase):
     user_id: int
     created_at: datetime
 
-    class Config:
-        orm_mode = True
-
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
@@ -175,4 +172,16 @@ class UserWithFollows(UserOut):
             "description": "Usuário com informações de seguidores e seguidos"
         }
     )
+
+class FollowOutDetailed(FollowOut):
+    followers: UserOut
+    following: UserOut
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "description": "Modelo detalhado com informações completas do seguidor e seguido"
+        }
+    )
+
 
