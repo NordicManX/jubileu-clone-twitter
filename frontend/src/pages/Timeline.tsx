@@ -135,7 +135,7 @@ const Timeline = () => {
     }
 
     try {
-      const res = await fetch(`http://localhost:8000/tweets/${tweetId}`, {
+      const res = await fetch(`https://jubileu-clone-twitter.onrender.com/tweets/${tweetId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -173,7 +173,7 @@ const Timeline = () => {
     }
 
     try {
-      const res = await fetch(`http://localhost:8000/tweets/${tweetId}`, {
+      const res = await fetch(`https://jubileu-clone-twitter.onrender.com/tweets/${tweetId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
