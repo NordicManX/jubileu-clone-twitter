@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Sidebar from "./Sidebar"; // Assumindo que Sidebar.tsx está no mesmo diretório
+import Sidebar from "./Sidebar";
 
 const Perfil = () => {
   const [mostrarModal, setMostrarModal] = useState(false);
@@ -7,7 +7,6 @@ const Perfil = () => {
   const [novoEmail, setNovoEmail] = useState("");
 
   const handleLogout = () => {
-    // Função de logout (exemplo)
     localStorage.clear();
   };
 
@@ -23,9 +22,10 @@ const Perfil = () => {
         setNovoEmail={setNovoEmail}
         handleLogout={handleLogout}
       />
-      
+
+      {/* Modal de edição */}
       {mostrarModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-96">
             <h2 className="text-2xl font-semibold mb-4">Editar Perfil</h2>
             <form>
@@ -61,7 +61,10 @@ const Perfil = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setMostrarModal(false)}
+                onClick={() => {
+                  console.log("Cancelando...");
+                  setMostrarModal(false);
+                }}
                 className="ml-4 text-gray-500"
               >
                 Cancelar

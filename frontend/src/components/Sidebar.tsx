@@ -1,14 +1,3 @@
-interface SidebarProps {
-  userName: string;
-  userEmail: string;
-  seguindo: boolean;
-  setSeguindo: (value: boolean) => void;
-  setMostrarModal: (value: boolean) => void;
-  setNovoNome: (value: string) => void;
-  setNovoEmail: (value: string) => void;
-  handleLogout: () => void;
-}
-
 const Sidebar = ({
   userName,
   userEmail,
@@ -31,9 +20,10 @@ const Sidebar = ({
 
         <button
           onClick={() => {
+            console.log("Abrindo o modal..."); // Verificando se o clique é registrado
             setNovoNome(userName);
             setNovoEmail(userEmail);
-            setMostrarModal(true); // Chama o estado do modal para abrir
+            setMostrarModal(true); // Abre o modal
           }}
           className="mt-2 px-2 py-1 text-sm bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-all"
         >
