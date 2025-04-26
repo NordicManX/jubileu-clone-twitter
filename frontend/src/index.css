@@ -10,7 +10,7 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  background-color: #242424; /* Fundo padrão dark */
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -29,10 +29,12 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
+  /* display: flex; */      /* <-- REMOVA OU COMENTE ESTA LINHA */
+  /* place-items: center; */ /* <-- REMOVA OU COMENTE ESTA LINHA */
   min-width: 320px;
   min-height: 100vh;
+  /* Você pode querer definir um background aqui caso a caso ou no :root */
+  /* Ex: background-color: #f0f2f5; */
 }
 
 h1 {
@@ -62,7 +64,7 @@ button:focus-visible {
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
-    background-color: #ffffff;
+    background-color: #ffffff; /* Fundo padrão light */
   }
   a:hover {
     color: #747bff;
@@ -70,4 +72,8 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+  /* Se quiser um fundo específico para o body no light mode: */
+  /* body { */
+  /* background-color: #ffffff; */
+  /* } */
 }

@@ -1,10 +1,20 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  /* Remova ou comente as linhas que limitam e centralizam */
+  /* max-width: 1280px; */
+  /* margin: 0 auto; */
+  /* Remova o padding global se não for desejado */
+  /* padding: 2rem; */
+
+  /* Remova text-align se não quiser TUDO centralizado por padrão */
+  /* text-align: center; */
+
+  /* É uma boa prática garantir que o root ocupe a largura total */
+  /* Você pode adicionar isso se não estiver definido em outro lugar */
+  width: 100%;
+  min-height: 100vh; /* Garante altura mínima */
 }
 
+/* Mantenha os outros estilos (.logo, .card, etc.) se ainda precisar deles */
 .logo {
   height: 6em;
   padding: 1.5em;
