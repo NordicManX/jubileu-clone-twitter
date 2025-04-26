@@ -177,7 +177,7 @@ const Timeline = () => {
                 <div className="p-6">
                     {/* Área de postagem */}
                     <div className="bg-white rounded-lg shadow p-4 mb-6 border border-gray-200">
-                       <textarea className="w-full h-24 border border-gray-300 rounded-md p-3 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="O que está acontecendo?" value={novoTweet} onChange={(e) => setNovoTweet(e.target.value)} maxLength={280} />
+                       <textarea className="w-full h-24 border border-gray-300 rounded-md p-3 text-gray-100 placeholder-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="O que está acontecendo?" value={novoTweet} onChange={(e) => setNovoTweet(e.target.value)} maxLength={280} />
                        <div className="flex justify-between items-center mt-3"> <span className={`text-sm ${novoTweet.length > 280 ? 'text-red-500' : 'text-gray-500'}`}> {novoTweet.length}/280 </span> <button onClick={handleNovoTweet} className={`font-bold py-2 px-5 rounded-full text-white transition-colors ${ novoTweet.trim() === "" || novoTweet.length > 280 ? "bg-blue-300 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600" }`} disabled={novoTweet.trim() === "" || novoTweet.length > 280}> Postar </button> </div>
                     </div>
                     {/* Lista de Tweets */}
