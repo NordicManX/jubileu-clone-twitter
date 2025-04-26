@@ -58,21 +58,18 @@ const RecuperarSenha = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-3 px-4 rounded-lg font-semibold text-white shadow-md transition-all ${
-                isLoading
-                  ? "bg-azul-cremoso-DEFAULT cursor-not-allowed"
-                  : "bg-azul-cremoso-dark hover:bg-azul-texto hover:shadow-lg"
+              className={`w-full py-3 px-4 rounded-lg font-semibold text-white shadow-md transition-all ${ isLoading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 hover:shadow-lg"
               }`}
             >
               {isLoading ? "Enviando..." : "Enviar link de recuperação"}
             </button>
 
             <div className="text-center pt-4">
-              <p className="text-sm text-[#7aaae8]">
+              <p className="text-sm text-gray-600">
                 Lembrou a senha?{" "}
                 <Link
                   to="/login"
-                  className="font-semibold text-azul-cremoso-dark hover:text-azul-texto hover:underline"
+                  className="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
                 >
                   Voltar ao login
                 </Link>
