@@ -42,7 +42,7 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
             >
                 {/* Cabeçalho com botão de fechar */}
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-[#4a7bc1]">Menu</h2>
+                    <h2 className="text-xl font-bold text-[#4a7bc1]"></h2>
                     <button onClick={onClose} className="p-1 text-gray-500 hover:text-gray-800">
                         <X className="w-6 h-6" />
                     </button>
