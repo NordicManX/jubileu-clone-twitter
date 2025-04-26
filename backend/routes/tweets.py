@@ -13,7 +13,7 @@ from backend.schemas import ( # Ou ..schemas
 from backend.database import get_db # Ou ..database
 from backend.auth import get_current_user # Ou ..auth
 
-router = APIRouter(prefix="/tweets", tags=["Tweets"]) # Mantido /tweets como prefixo
+router = APIRouter(prefix="/tweets", tags=["Tweets"])
 
 
 # ===================== TWEETS =====================
@@ -27,48 +27,23 @@ async def create_tweet(
     """Cria um novo tweet para o usuário autenticado."""
     content = tweet.content.strip()
     if not content:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="O conteúdo do tweet não pode ser vazio."
-        )
-    db_tweet = Tweet(
-        content=content,
-        owner_id=current_user.id, # Associa ao usuário do token
-        created_at=datetime.utcnow()
-    )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="O conteúdo do tweet não pode ser vazio.")
+    db_tweet = Tweet(content=content, owner_id=current_user.id, created_at=datetime.utcnow())
     db.add(db_tweet)
     db.commit()
     db.refresh(db_tweet)
-    # Usando model_validate para Pydantic v2 (se aplicável)
-    # ou TweetOut.from_orm(db_tweet) para Pydantic v1
     return TweetOut.model_validate(db_tweet)
 
 
 @router.get("/", response_model=List[TweetOut])
-async def read_tweets(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
+async def read_tweets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Lista todos os tweets com paginação."""
-    tweets = (
-        db.query(Tweet)
-        .order_by(Tweet.created_at.desc())
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
-    # Nota: Não levanta 404 se a lista estiver vazia, retorna lista vazia (comportamento comum)
-    # if not tweets:
-    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nenhum tweet encontrado.")
+    tweets = (db.query(Tweet).order_by(Tweet.created_at.desc()).offset(skip).limit(limit).all())
     return tweets
 
 
 @router.get("/{tweet_id}", response_model=TweetOut)
-async def read_tweet(
-    tweet_id: int,
-    db: Session = Depends(get_db)
-):
+async def read_tweet(tweet_id: int, db: Session = Depends(get_db)):
     """Obtém um tweet específico pelo ID."""
     db_tweet = db.query(Tweet).filter(Tweet.id == tweet_id).first()
     if not db_tweet:
@@ -79,38 +54,33 @@ async def read_tweet(
 @router.put("/{tweet_id}", response_model=TweetOut)
 async def update_tweet(
     tweet_id: int,
-    tweet_data: TweetUpdate, # Recebe apenas o conteúdo a ser atualizado
+    tweet_data: TweetUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Session = Depends(get_db)
 ):
     """Atualiza um tweet pelo ID, se for do usuário autenticado."""
     db_tweet = db.query(Tweet).filter(Tweet.id == tweet_id).first()
-
     if not db_tweet:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tweet não encontrado.")
 
-    # <<< LOGS DE DIAGNÓSTICO PARA EDIÇÃO >>>
-    print(f"--- CHECK PERMISSÃO UPDATE TWEET (BACKEND) ---")
-    print(f"Tweet ID Recebido: {tweet_id}")
-    print(f"ID Usuário Atual (do Token): {current_user.id} (Tipo: {type(current_user.id)})")
-    print(f"ID Dono do Tweet (do DB): {db_tweet.owner_id} (Tipo: {type(db_tweet.owner_id)})")
-    print(f"Resultado da Comparação (owner_id != current_user.id): {db_tweet.owner_id != current_user.id}")
-    # <<< FIM DOS LOGS >>>
-
-    if db_tweet.owner_id != current_user.id:
+    # <<< AJUSTE AQUI: Converte owner_id para int antes de comparar >>>
+    if int(db_tweet.owner_id) != current_user.id:
+        # Logs de diagnóstico (podem ser removidos após correção)
+        print(f"--- CHECK PERMISSÃO UPDATE TWEET (BACKEND) ---")
+        print(f"Tweet ID Recebido: {tweet_id}")
+        print(f"ID Usuário Atual (do Token): {current_user.id} (Tipo: {type(current_user.id)})")
+        print(f"ID Dono do Tweet (do DB): {db_tweet.owner_id} (Tipo: {type(db_tweet.owner_id)})")
+        print(f"Resultado da Comparação (int(owner_id) != current_user.id): {int(db_tweet.owner_id) != current_user.id}")
         print(f"!!! ACESSO NEGADO (UPDATE) PELO BACKEND !!!")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, # Corrigido para 403
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Você não tem permissão para editar este tweet."
         )
 
-    # Atualiza o conteúdo
     new_content = tweet_data.content.strip()
     if not new_content:
          raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="O conteúdo do tweet não pode ser vazio.")
     db_tweet.content = new_content
-    # Opcional: atualizar timestamp de modificação se houver no modelo
-    # db_tweet.updated_at = datetime.utcnow()
     print(f"Permissão UPDATE OK. Atualizando tweet {tweet_id}...")
     db.commit()
     db.refresh(db_tweet)
@@ -125,70 +95,53 @@ async def delete_tweet(
 ):
     """Exclui um tweet pelo ID, se for do usuário autenticado."""
     db_tweet = db.query(Tweet).filter(Tweet.id == tweet_id).first()
-
     if not db_tweet:
-        # Retorna 204 mesmo se não encontrado para não vazar informação (opcional)
-        # Ou mantém o 404 se preferir indicar que não existia
          print(f"Tentativa de deletar tweet {tweet_id} não encontrado.")
+         # Decide se retorna erro ou não
          # raise HTTPException(status_code=404, detail="Tweet não encontrado.")
-         return # Retorna silenciosamente com 204 (ou outra estratégia)
+         return # Retorna 204 mesmo se não encontrado
 
-    # <<< LOGS DE DIAGNÓSTICO PARA EXCLUSÃO >>>
+    # Logs de diagnóstico (mantidos por enquanto)
     print(f"--- CHECK PERMISSÃO DELETE TWEET (BACKEND) ---")
     print(f"Tweet ID Recebido: {tweet_id}")
     print(f"ID Usuário Atual (do Token): {current_user.id} (Tipo: {type(current_user.id)})")
     print(f"ID Dono do Tweet (do DB): {db_tweet.owner_id} (Tipo: {type(db_tweet.owner_id)})")
-    print(f"Resultado da Comparação (owner_id != current_user.id): {db_tweet.owner_id != current_user.id}")
-    # <<< FIM DOS LOGS >>>
+    # <<< AJUSTE AQUI: Converte owner_id para int antes de comparar >>>
+    owner_id_int = int(db_tweet.owner_id) # Converte primeiro
+    print(f"Resultado da Comparação (owner_id_int != current_user.id): {owner_id_int != current_user.id}")
 
-    if db_tweet.owner_id != current_user.id:
+    if owner_id_int != current_user.id:
         print(f"!!! ACESSO NEGADO (DELETE) PELO BACKEND !!!")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, # Corrigido para 403
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Você não tem permissão para excluir este tweet."
         )
 
     print(f"Permissão DELETE OK. Excluindo tweet {tweet_id}...")
     db.delete(db_tweet)
     db.commit()
-    # HTTP 204 não deve retornar corpo
+    # HTTP 204 não retorna corpo
 
 
 # ===================== COMENTÁRIOS (sem alterações) =====================
+# ... (código dos comentários) ...
 
 @router.post("/{tweet_id}/comments/", response_model=CommentOut, status_code=status.HTTP_201_CREATED)
-async def create_comment(
-    tweet_id: int,
-    comment_data: CommentCreate,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Session = Depends(get_db)
-):
-    """Cria um comentário em um tweet específico."""
+# ... (função create_comment) ...
+async def create_comment( tweet_id: int, comment_data: CommentCreate, current_user: Annotated[User, Depends(get_current_user)], db: Session = Depends(get_db)):
     db_tweet = db.query(Tweet).filter(Tweet.id == tweet_id).first()
-    if not db_tweet:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tweet não encontrado.")
+    if not db_tweet: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tweet não encontrado.")
     text = comment_data.text.strip()
-    if not text:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="O comentário não pode ser vazio.")
-    db_comment = Comment(
-        text=text,
-        tweet_id=tweet_id,
-        user_id=current_user.id # Associa ao usuário do token
-    )
-    db.add(db_comment)
-    db.commit()
-    db.refresh(db_comment)
+    if not text: raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="O comentário não pode ser vazio.")
+    db_comment = Comment(text=text, tweet_id=tweet_id, user_id=current_user.id)
+    db.add(db_comment); db.commit(); db.refresh(db_comment)
     return CommentOut.model_validate(db_comment)
 
 
 @router.get("/{tweet_id}/comments/", response_model=List[CommentOut])
-async def read_comments(
-    tweet_id: int,
-    db: Session = Depends(get_db)
-):
-    """Lista todos os comentários de um tweet."""
+# ... (função read_comments) ...
+async def read_comments(tweet_id: int, db: Session = Depends(get_db)):
     db_tweet = db.query(Tweet).filter(Tweet.id == tweet_id).first()
-    if not db_tweet:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tweet não encontrado.")
+    if not db_tweet: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tweet não encontrado.")
     comments = db.query(Comment).filter(Comment.tweet_id == tweet_id).all()
     return comments
